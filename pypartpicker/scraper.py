@@ -5,6 +5,7 @@ import re
 from typing import List
 import requests
 from pypartpicker.regex import LIST_REGEX, PRODUCT_REGEX
+import time
 
 from bs4 import BeautifulSoup
 from functools import partial
@@ -18,6 +19,7 @@ class Part:
         self.type = kwargs.get("type")
         self.price = kwargs.get("price")
         self.image = kwargs.get("image")
+        self.amazon_url = kwargs.get("amazon_url")
 
 
 class PCPPList:
@@ -37,6 +39,7 @@ class Product(Part):
         self.rating = kwargs.get("rating")
         self.reviews = kwargs.get("reviews")
         self.compatible_parts = kwargs.get("compatible_parts")
+        self.amazon_url = kwargs.get("amazon_url")
 
 
 class Price:
@@ -228,11 +231,13 @@ class Scraper:
         parts = []
 
         for i in range(iterations):
+            time.sleep(5)
             try:
+                #print('current page: ', f"{search_link}&page={i + 1}")
                 soup = self.__make_soup(f"{search_link}&page={i + 1}")
             except requests.exceptions.ConnectionError:
                 raise ValueError("Invalid region! Max retries exceeded with URL.")
-
+            
             # checks if the page redirects to a product page
             if soup.find(class_="pageTitle").get_text() != "Product Search":
                 # creates a part object with the information from the product page
@@ -240,6 +245,7 @@ class Scraper:
                     name=soup.find(class_="pageTitle").get_text(),
                     url=search_link,
                     price=None,
+                    amazon_url=None
                 )
 
                 # searches for the pricing table
@@ -262,8 +268,10 @@ class Scraper:
                         .get_text()
                         .strip("\n")
                         .strip("+")
-                    )
-
+                    )                    
+                    # sets the amazon link of the product
+                    part_object.amazon_url = row.find(class_="td__buy").a['href']
+                    
                     break
 
                 # returns the part object
@@ -291,9 +299,20 @@ class Scraper:
                         "https://https://", "https://"
                     ),
                 )
-                part_object.price = (
-                    product.find(class_="search_results--price").get_text().strip()
-                )
+                
+                try:
+                    part_object.price = (
+                        product.find(class_="search_results--price").get_text().strip()
+                    )
+            
+                    part_object.amazon_url = (
+                        product.find(class_="search_results--price").a['href']
+                    )
+                except Exception as e:
+                    continue
+
+                if part_object.amazon_url == "":
+                    part_object.amazon_url = None
 
                 if part_object.price == "":
                     part_object.price = None
@@ -313,7 +332,16 @@ class Scraper:
             soup = self.__make_soup(part_url)
         except requests.exceptions.ConnectionError:
             raise ValueError("Invalid product URL! Max retries exceeded with URL.")
-
+        
+        # finds amazon link
+        amazon_link = None
+        
+        for link in soup.find_all('a', href=True):
+            href = link['href']
+            if 'amazon.it' in href:
+                amazon_link = href
+                break        
+        
         specs_block = soup.find(class_="block xs-hide md-block specs")
 
         specs = {}
@@ -367,7 +395,7 @@ class Scraper:
 
         # gets the HTML code for the box containing reviews
         review_box = soup.find(class_="block partReviews")
-
+        
         # skips over this process if the review box does not exist
         if review_box is not None:
             reviews = []
@@ -437,18 +465,18 @@ class Scraper:
             specs=specs,
             price_list=prices,
             price=price,
-            rating=soup.find(class_="actionBox-2023 actionBox__ratings")
-            .find(class_="product--rating list-unstyled")
-            .get_text()
-            .strip("\n")
-            .strip()
-            .strip("()"),
+            rating=0,#soup.find(class_="actionBox-2023 actionBox__ratings")
+                   #.find(class_="product--rating list-unstyled")
+                   #.get_text()
+                   #.strip("\n")
+                   #.strip()
+                   #.strip("()"),
             reviews=reviews,
             compatible_parts=compatible_parts,
-            type=soup.find(class_="breadcrumb")
-            .find(class_="list-unstyled")
-            .find("li")
-            .get_text(),
+            #type=soup.find(class_="breadcrumb")
+            #.find(class_="list-unstyled")
+            #.find("li")
+            #.get_text()
         )
 
         image_box = soup.find(class_="single_image_gallery_box")
@@ -458,6 +486,8 @@ class Scraper:
             product_object.image = image_box.find("img")["src"].replace(
                 "https://https://", "https://"
             )
+            
+        product_object.amazon_url = amazon_link
 
         return product_object
 
