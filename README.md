@@ -15,11 +15,11 @@
 ---
 Installation via pip:
 ```
->>> pip install pypartpicker
+>>> pip install pypartpicker2
 ```
 Or clone the repo directly:
 ```
->>> git clone https://github.com/thefakequake/pypartpicker.git
+>>> git clone https://github.com/giuseppe99barchetta/pypartpicker2.git
 ```
 # Example programs
 
@@ -27,7 +27,7 @@ Or clone the repo directly:
 
 Here is a program that searches for i7's, prints every result, then gets the first result and prints its specs:
 ```python
-from pypartpicker import Scraper
+from pypartpicker2  import Scraper
 
 # creates the scraper object
 pcpp = Scraper()
@@ -48,7 +48,7 @@ print(product.specs)
 ```
 Here is another program that finds i3s that are cheaper than or equal to £110, prints their specs and then prints the first review:
 ```python
-from pypartpicker import Scraper
+from pypartpicker2 import Scraper
 from time import sleep
 
 # returns a list of Part objects we can iterate through
