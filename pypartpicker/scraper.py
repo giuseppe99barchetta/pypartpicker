@@ -456,7 +456,13 @@ class Scraper:
                         "https://" + urlparse(part_url).netloc + item.find("a")["href"],
                     )
                 )
-
+                
+        
+        try:        
+            rating = soup.find(class_="actionBox-2023 actionBox__ratings").find(class_="product--rating list-unstyled").get_text().strip("\n").strip().strip("()")
+        except:
+            rating = 0
+        
         # creates the product object to return
         product_object = Product(
             name=soup.find(class_="pageTitle").get_text(),
@@ -465,18 +471,13 @@ class Scraper:
             specs=specs,
             price_list=prices,
             price=price,
-            rating=0,#soup.find(class_="actionBox-2023 actionBox__ratings")
-                   #.find(class_="product--rating list-unstyled")
-                   #.get_text()
-                   #.strip("\n")
-                   #.strip()
-                   #.strip("()"),
+            rating=rating,
             reviews=reviews,
             compatible_parts=compatible_parts,
-            #type=soup.find(class_="breadcrumb")
-            #.find(class_="list-unstyled")
-            #.find("li")
-            #.get_text()
+            type=soup.find(class_="breadcrumb")
+            .find(class_="list-unstyled")
+            .find("li")
+            .get_text()
         )
 
         image_box = soup.find(class_="single_image_gallery_box")
