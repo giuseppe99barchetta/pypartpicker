@@ -7,7 +7,7 @@ setup(
     name="pypartpicker2",
     version="0.1.6",
     description="A package that scrapes pcpartpicker.com and returns the results as objects.",
-    packages=["pypartpicker2"],
+    packages=["pypartpicker"],
     url="https://github.com/giuseppe99barchetta/pypartpicker",
     keywords=["pcpartpicker", "scraper", "list", "beautifulsoup", "pc", "parts"],
     install_requires=["bs4", "requests"],
