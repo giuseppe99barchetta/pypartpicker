@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as readme:
 
 setup(
     name="pypartpicker2",
-    version="0.1.8",
+    version="0.1.9",
     description="A package that scrapes pcpartpicker.com and returns the results as objects.",
     packages=["pypartpicker"],
     url="https://github.com/giuseppe99barchetta/pypartpicker",

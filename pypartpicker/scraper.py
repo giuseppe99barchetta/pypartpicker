@@ -85,40 +85,37 @@ class Scraper:
             raise ValueError("response_retriever kwarg must be callable!")
         self.response_retriever = response_retriever
         
-        self.proxies = kwargs.get("proxies", [])
+        self.proxy = kwargs.get("proxy")
         self.current_proxy_index = 0
-
-    def __rotate_proxy(self):
-        if self.proxies:
-            self.current_proxy_index = (self.current_proxy_index + 1) % len(self.proxies)
-            return self.proxies[self.current_proxy_index]
-        return None
     
     def __default_response_retriever(self, url, **kwargs):
-        if not self.proxies:
+        if not self.proxy:
             return requests.get(url, **kwargs)
+
+        try:
+            response = requests.get(url, proxies=self.proxy, timeout=5, **kwargs)
+            if response.status_code == 200:
+                return response
+        except requests.exceptions.RequestException as e:
+            print(f"Errore durante la richiesta con proxy {self.proxy}: {e}")
+
+        return None
         
-        attempt_count = len(self.proxies)
-        while attempt_count > 0:
-            proxy = self.__rotate_proxy()
-            try:
-                return requests.get(url, proxies={"http": proxy, "https": proxy}, **kwargs)
-            except requests.exceptions.RequestException:
-                attempt_count -= 1
-                print(f"Proxy {proxy} failed, rotating to the next proxy.")
-        
-        raise requests.exceptions.RequestException("All proxies failed.")
-    
     # Private Helper Function
     def __make_soup(self, url) -> BeautifulSoup:
         # sends a request to the URL
         page = self.response_retriever(url, headers=self.headers)
         # gets the HTML code for the website and parses it using Python's built in HTML parser
-        soup = BeautifulSoup(page.content, "html.parser")
-        if "Verification" in soup.find(class_="pageTitle").get_text():
-            raise Verification(
-                f"You are being rate limited by PCPartPicker! Slow down your rate of requests, and complete the captcha at this URL: {url}"
-            )
+        try:
+            soup = BeautifulSoup(page.content, "html.parser")
+        except Exception as e:
+            raise Exception(f"'NoneType' object has no attribute 'content', daojoad")
+        try:
+            if "Verification" in soup.find(class_="pageTitle").get_text():
+                raise Verification(
+                    f"You are being rate limited by PCPartPicker! Slow down your rate of requests, and complete the captcha at this URL: {url}"
+                )
+        except Exception as e:None
         # returns the HTML
         return soup
 
@@ -251,7 +248,7 @@ class Scraper:
         parts = []
 
         for i in range(iterations):
-            time.sleep(5)
+            #time.sleep(5)
             try:
                 #print('current page: ', f"{search_link}&page={i + 1}")
                 soup = self.__make_soup(f"{search_link}&page={i + 1}")
@@ -352,7 +349,7 @@ class Scraper:
             soup = self.__make_soup(part_url)
         except requests.exceptions.ConnectionError:
             raise ValueError("Invalid product URL! Max retries exceeded with URL.")
-        
+                
         # finds amazon link
         amazon_link = None
         
@@ -360,7 +357,7 @@ class Scraper:
             href = link['href']
             if 'amazon.it' in href:
                 amazon_link = href
-                break        
+                break                  
         
         specs_block = soup.find(class_="block xs-hide md-block specs")
 
