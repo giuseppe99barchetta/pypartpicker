@@ -84,12 +84,31 @@ class Scraper:
         if not callable(response_retriever):
             raise ValueError("response_retriever kwarg must be callable!")
         self.response_retriever = response_retriever
-        self.proxies = kwargs.get("proxies", None)
+        
+        self.proxies = kwargs.get("proxies", [])
+        self.current_proxy_index = 0
 
-    @staticmethod
+    def __rotate_proxy(self):
+        if self.proxies:
+            self.current_proxy_index = (self.current_proxy_index + 1) % len(self.proxies)
+            return self.proxies[self.current_proxy_index]
+        return None
+    
     def __default_response_retriever(self, url, **kwargs):
-        return requests.get(url, proxies=self.proxies, **kwargs)
-
+        if not self.proxies:
+            return requests.get(url, **kwargs)
+        
+        attempt_count = len(self.proxies)
+        while attempt_count > 0:
+            proxy = self.__rotate_proxy()
+            try:
+                return requests.get(url, proxies={"http": proxy, "https": proxy}, **kwargs)
+            except requests.exceptions.RequestException:
+                attempt_count -= 1
+                print(f"Proxy {proxy} failed, rotating to the next proxy.")
+        
+        raise requests.exceptions.RequestException("All proxies failed.")
+    
     # Private Helper Function
     def __make_soup(self, url) -> BeautifulSoup:
         # sends a request to the URL
