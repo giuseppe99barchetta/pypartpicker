@@ -84,10 +84,11 @@ class Scraper:
         if not callable(response_retriever):
             raise ValueError("response_retriever kwarg must be callable!")
         self.response_retriever = response_retriever
+        self.proxies = kwargs.get("proxies", None)
 
     @staticmethod
-    def __default_response_retriever(url, **kwargs):
-        return requests.get(url, **kwargs)
+    def __default_response_retriever(self, url, **kwargs):
+        return requests.get(url, proxies=self.proxies, **kwargs)
 
     # Private Helper Function
     def __make_soup(self, url) -> BeautifulSoup:
